@@ -1,0 +1,47 @@
+# ==========================================================
+#  Levanta MySQL en Docker para desarrollo local.
+#  Comando:  docker compose up -d
+#  Detener:  docker compose down
+# ==========================================================
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: vetcitas-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: veterinaria_db
+      MYSQL_USER: vet_user
+      MYSQL_PASSWORD: vet_pass123
+      TZ: America/Lima
+    ports:
+      - "3306:3306"
+    volumes:
+      - vetcitas_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ------------------------------------------------------------
+  # OPCIONAL: correr también la API dentro de Docker.
+  # Comando:  docker compose --profile app up -d --build
+  # (Si usas Spring Tools para ejecutar la API, no necesitas esto.)
+  # ------------------------------------------------------------
+  api:
+    profiles: ["app"]
+    build: .
+    container_name: vetcitas-api
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/veterinaria_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Lima
+      DB_USER: vet_user
+      DB_PASSWORD: vet_pass123
+    ports:
+      - "8080:8080"
+
+volumes:
+  vetcitas_data:
